@@ -1,0 +1,8 @@
+﻿<Application x:Class="IndexSorter.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="IndexSorterWindow.xaml">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>
