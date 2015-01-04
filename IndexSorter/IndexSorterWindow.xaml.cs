@@ -41,47 +41,11 @@ namespace IndexSorter
 			wor.RunWorkerAsync();
 		}
 
-		//[StructLayout(LayoutKind.Sequential, Pack = 2)]
-		//public struct Index
-		//{
-		//	public int Key;
-		//	//public short File;
-		//	//public short Length;
-		//	public int Position;
-
-		//	public void Write(Stream stream)
-		//	{
-		//		stream.Write(BitConverter.GetBytes(Key), 0, 4);
-		//		//stream.Write(BitConverter.GetBytes(File), 0, 2);
-		//		//stream.Write(BitConverter.GetBytes(Length), 0, 2);
-		//		stream.Write(BitConverter.GetBytes(Position), 0, 4);
-		//	}
-
-		//	public Index(byte[] bytes)
-		//	{
-		//		if (bytes.Length == 12)
-		//		{
-		//			Key = BitConverter.ToInt32(bytes, 0);
-		//			//File = BitConverter.ToInt16(bytes, 4);
-		//			//Length = BitConverter.ToInt16(bytes, 6);
-		//			Position = BitConverter.ToInt32(bytes, 8);
-		//		}
-		//		else
-		//		{
-		//			Key = 0;
-		//			//File = 0;
-		//			//Length = 0;
-		//			Position = 0;
-		//		}
-		//	}
-		//}
-
 		private void WorOnDoWork(object sender, DoWorkEventArgs doWorkEventArgs)
 		{
 			short dcnt = 0;
 			short icnt = 0;
 			var pcnt = 0;
-			var maxfilesize = 80000064;
 			var buf = new byte[8];
 			var sort = new SortedSet<long>();
 			foreach (FileInfo file in dirin.EnumerateFiles("index-*"))
@@ -104,8 +68,6 @@ namespace IndexSorter
 								((BackgroundWorker)sender).ReportProgress(0, (string)(file.Name + " " + pcnt + " индексов"));
 							}
 						}
-
-
 					}
 
 					var datfile = new FileInfo(file.FullName.Replace("index-", "datas-"));
@@ -114,7 +76,6 @@ namespace IndexSorter
 
 					using (var datstream = new MemoryStream())
 					{
-
 						using (var stream = new MemoryStream())
 						{
 							short len = 0;
@@ -147,10 +108,8 @@ namespace IndexSorter
 								{
 									((BackgroundWorker)sender).ReportProgress(0, (string)(file.Name + " " + pcnt + " индексов"));
 								}
-
-
 							}
-
+							
 							if (len != 0)
 							{
 								stream.Write(BitConverter.GetBytes(last), 0, 4);
@@ -163,7 +122,6 @@ namespace IndexSorter
 								stream.Position = 0;
 								stream.CopyTo(str);
 							}
-
 						}
 						using (var datstr = File.Create(dirout.FullName + "\\" + datfile.Name))
 						{
@@ -175,7 +133,6 @@ namespace IndexSorter
 				}
 				catch (Exception e)
 				{
-
 				}
 			}
 			((BackgroundWorker)sender).ReportProgress(pcnt, "Всего");
