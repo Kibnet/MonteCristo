@@ -1,8 +1,32 @@
-﻿<Window x:Class="MonteCristo.MonteCristoWindow"
+﻿<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:monteCristo="clr-namespace:MonteCristo"
+        x:Class="MonteCristo.MonteCristoWindow"
         Title="MonteCristoWindow" Height="350" Width="525">
     <Grid>
-        
+        <TextBox x:Name="InPath" HorizontalAlignment="Left" Height="20" Margin="10,10,0,0" TextWrapping="Wrap" Text="4FromMerger" VerticalAlignment="Top" Width="120"/>
+        <Button Content="Загрузить индексы" HorizontalAlignment="Left" Margin="135,9,0,0" VerticalAlignment="Top" Width="120" Click="LoadIndexes"/>
+        <Button Content="Найти вершину" HorizontalAlignment="Left" Margin="260,35,0,0" VerticalAlignment="Top" Width="120" Click="FindVertex"/>
+
+        <syncfusion:IntegerTextBox Name="VertexBox" ToolTip="Идентификатор для поиска" HorizontalAlignment="Left" Margin="10,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="100" VerticalAlignment="Top" Width="120"/>
+        <syncfusion:IntegerTextBox Name="DepthBox" ToolTip="Глубина поиска" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="10" VerticalAlignment="Top" Width="120"/>
+        <Label x:Name="Status" Content="" Margin="10,60,10,0" VerticalAlignment="Top"/>
+        <TreeView Name="GraphView" Margin="10,91,10,10">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate DataType="monteCristo:Vertex" ItemsSource = "{Binding Path=Items}">
+                    <TextBlock Text="{Binding Path=ID}"/>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+            <monteCristo:Vertex ID="1">
+                <monteCristo:Vertex.Items>
+                    <monteCristo:Vertex ID="0"/>
+                    <monteCristo:Vertex ID="2"/>
+                    <monteCristo:Vertex ID="3"/>
+                </monteCristo:Vertex.Items>
+            </monteCristo:Vertex>
+        </TreeView>
+
     </Grid>
 </Window>
