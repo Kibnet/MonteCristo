@@ -18,9 +18,10 @@ namespace PairGenerator
 		{
 			var min = (int) Minimum.Value.GetValueOrDefault();
 			var max = (int)Maximum.Value.GetValueOrDefault();
-			var com = (int)Components.Value.GetValueOrDefault();
 			var prs = (int)Pairs.Value.GetValueOrDefault();
 			var fil = (int)FileName.Value.GetValueOrDefault();
+
+			var start = DateTime.Now;
 
 			FileName.Value++;
 			var dirout = new DirectoryInfo(OutPath.Text);
@@ -41,6 +42,7 @@ namespace PairGenerator
 					stream.Write(BitConverter.GetBytes(p2), 0, 4);
 				}
 			}
+			Status.Content = prs + " пар за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд";
 		}
 	}
 }

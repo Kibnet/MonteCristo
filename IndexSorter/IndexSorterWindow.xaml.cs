@@ -43,29 +43,30 @@ namespace IndexSorter
 
 		private void WorOnDoWork(object sender, DoWorkEventArgs doWorkEventArgs)
 		{
-			short dcnt = 0;
-			short icnt = 0;
-			var pcnt = 0;
-			var buf = new byte[8];
+			long pcnt = 0;
+			var buf = new byte[4];
 			var sort = new SortedSet<long>();
+			var start = DateTime.Now;
+			long lon;
 			foreach (FileInfo file in dirin.EnumerateFiles("index-*"))
 			{
 				try
 				{
-					using (var stream = new MemoryStream(File.ReadAllBytes(file.FullName)))
+					using (var stream = file.OpenRead())
 					{
 						while (true)
 						{
-							if (8 != stream.Read(buf, 0, 8))
+							lon = stream.Position;
+							if (4 != stream.Read(buf, 0, 4))
 							{
 								break;
 							}
-							var lon = BitConverter.ToInt64(buf, 0);
+							lon += (long)(BitConverter.ToInt32(buf, 0)) << 32;
 							sort.Add(lon);
 							++pcnt;
 							if (pcnt % 100000 == 0)
 							{
-								((BackgroundWorker)sender).ReportProgress(0, (string)(file.Name + " " + pcnt + " индексов"));
+								((BackgroundWorker)sender).ReportProgress(0, file.Name + " обработано " + pcnt + " пар");
 							}
 						}
 					}
@@ -74,9 +75,9 @@ namespace IndexSorter
 
 					var datbuf = File.ReadAllBytes(datfile.FullName);
 
-					using (var datstream = new MemoryStream())
+					using (var datas = new MemoryStream())
 					{
-						using (var stream = new MemoryStream())
+						using (var index = new MemoryStream())
 						{
 							short len = 0;
 							int last = int.MinValue;
@@ -90,43 +91,43 @@ namespace IndexSorter
 								{
 									if (len != 0)
 									{
-										stream.Write(BitConverter.GetBytes(last), 0, 4);
-										stream.Write(BitConverter.GetBytes(lastpos), 0, 4);
-										stream.Write(BitConverter.GetBytes(len), 0, 2);
+										index.Write(BitConverter.GetBytes(last), 0, 4);
+										index.Write(BitConverter.GetBytes(lastpos), 0, 4);
+										index.Write(BitConverter.GetBytes(len), 0, 2);
 									}
 									last = key;
-									lastpos = (int)datstream.Position;
+									lastpos = (int)datas.Position;
 									len = 1;
 								}
 								else
 								{
 									len++;
 								}
-								datstream.Write(datbuf, pos, 4);
+								datas.Write(datbuf, pos, 4);
 								++pcnt;
 								if (pcnt % 100000 == 0)
 								{
-									((BackgroundWorker)sender).ReportProgress(0, (string)(file.Name + " " + pcnt + " индексов"));
+									((BackgroundWorker)sender).ReportProgress(0, file.Name + " обработано " + pcnt + " пар");
 								}
 							}
-							
+
 							if (len != 0)
 							{
-								stream.Write(BitConverter.GetBytes(last), 0, 4);
-								stream.Write(BitConverter.GetBytes(lastpos), 0, 4);
-								stream.Write(BitConverter.GetBytes(len), 0, 2);
+								index.Write(BitConverter.GetBytes(last), 0, 4);
+								index.Write(BitConverter.GetBytes(lastpos), 0, 4);
+								index.Write(BitConverter.GetBytes(len), 0, 2);
 							}
 
 							using (var str = File.Create(dirout.FullName + "\\" + file.Name))
 							{
-								stream.Position = 0;
-								stream.CopyTo(str);
+								index.Position = 0;
+								index.CopyTo(str);
 							}
 						}
 						using (var datstr = File.Create(dirout.FullName + "\\" + datfile.Name))
 						{
-							datstream.Position = 0;
-							datstream.CopyTo(datstr);
+							datas.Position = 0;
+							datas.CopyTo(datstr);
 						}
 					}
 					sort.Clear();
@@ -135,7 +136,7 @@ namespace IndexSorter
 				{
 				}
 			}
-			((BackgroundWorker)sender).ReportProgress(pcnt, "Всего");
+			((BackgroundWorker)sender).ReportProgress(0, pcnt + " индексов за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд");
 		}
 	}
 }

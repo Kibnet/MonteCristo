@@ -17,7 +17,8 @@ namespace IndexCreator
 
 		static DirectoryInfo dirin;
 		static DirectoryInfo dirout;
-
+		static short icnt;
+		static long maxfilesize;
 		private void Isolate_Click(object sender, RoutedEventArgs e)
 		{
 			dirin = new DirectoryInfo(InPath.Text);
@@ -33,21 +34,22 @@ namespace IndexCreator
 			var wor = new BackgroundWorker() { WorkerReportsProgress = true };
 			wor.ProgressChanged += (o, args) =>
 			{
-				Status.Content = args.UserState.ToString() + " обработано " + args.ProgressPercentage + " пар";
+				Status.Content = args.UserState.ToString();
 			};
 			wor.DoWork += WorOnDoWork;
-
+			icnt = (short)FileName.Value.GetValueOrDefault();
+			maxfilesize = MaxFileSize.Value.GetValueOrDefault();
 			wor.RunWorkerAsync();
 		}
 
 		private void WorOnDoWork(object sender, DoWorkEventArgs doWorkEventArgs)
 		{
-			short icnt = 0;
-			var pcnt = 0;
-			var maxfilesize = 80000000;
+			
+			long pcnt = 0;
 			var buf = new byte[8];
-			var data = new MemoryStream();
-			var index = new MemoryStream();
+			var datas = new MemoryStream((int) maxfilesize);
+			var index = new MemoryStream((int) maxfilesize);
+			var start = DateTime.Now;
 			foreach (FileInfo file in dirin.EnumerateFiles())
 			{
 				using (var stream = file.OpenRead())
@@ -60,17 +62,18 @@ namespace IndexCreator
 							{
 								break;
 							}
-							//index.Write(BitConverter.GetBytes((short)dcnt), 0, 2);
-							//index.Write(BitConverter.GetBytes((short)1), 0, 2);
-							index.Write(BitConverter.GetBytes((int)data.Position), 0, 4);
-							index.Write(buf, 0, 4);
-							data.Write(buf, 4, 4);
+							//index.Write(BitConverter.GetBytes((int)datas.Position), 0, 4);
+							//index.Write(buf, 0, 4);
+							//datas.Write(buf, 4, 4);
 
-							//index.Write(BitConverter.GetBytes((short)dcnt), 0, 2);
-							//index.Write(BitConverter.GetBytes((short)1), 0, 2);
-							index.Write(BitConverter.GetBytes((int)data.Position), 0, 4);
-							index.Write(buf, 4, 4);
-							data.Write(buf, 0, 4);
+							//index.Write(BitConverter.GetBytes((int)datas.Position), 0, 4);
+							//index.Write(buf, 4, 4);
+							//datas.Write(buf, 0, 4);
+							
+							index.Write(buf, 0, 8);
+							datas.Write(buf, 4, 4);
+							datas.Write(buf, 0, 4);
+
 
 							if (index.Length >= maxfilesize)
 							{
@@ -78,22 +81,26 @@ namespace IndexCreator
 								{
 									index.Position = 0;
 									index.CopyTo(indstr);
-									index.Close();
+									//index.Close();
 								}
 								using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
 								{
-									data.Position = 0;
-									data.CopyTo(datstr);
-									data.Close();
+									datas.Position = 0;
+									datas.CopyTo(datstr);
+									//datas.Close();
 								}
-								index = new MemoryStream();
-								data = new MemoryStream();
+								index.Position = 0;
+								index.SetLength(0);
+								datas.Position = 0;
+								datas.SetLength(0);
+								//index = new MemoryStream();
+								//datas = new MemoryStream();
 								icnt++;
 							}
 							++pcnt;
 							if (pcnt % 10000 == 0)
 							{
-								((BackgroundWorker)sender).ReportProgress(pcnt, (string)(file.Name));
+								((BackgroundWorker)sender).ReportProgress(0, file.Name + " обработано " + pcnt + " пар");
 							}
 						}
 					}
@@ -104,13 +111,13 @@ namespace IndexCreator
 				}
 
 			}
-			if (data.Length > 0)
+			if (datas.Length > 0)
 			{
 				using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
 				{
-					data.Position = 0;
-					data.CopyTo(datstr);
-					data.Close();
+					datas.Position = 0;
+					datas.CopyTo(datstr);
+					datas.Close();
 				}
 			} if (index.Length > 0)
 			{
@@ -121,7 +128,7 @@ namespace IndexCreator
 					index.Close();
 				}
 			}
-			((BackgroundWorker)sender).ReportProgress(pcnt, "Всего");
+			((BackgroundWorker)sender).ReportProgress(0, pcnt + " индексов за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд");
 		}
 	}
 }

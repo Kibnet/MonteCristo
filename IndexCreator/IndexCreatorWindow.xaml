@@ -1,12 +1,15 @@
 ﻿<Window x:Class="IndexCreator.IndexCreatorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         Title="IndexCreatorWindow" Height="350" Width="525">
     <Grid>
-        <Button Content="Создать" HorizontalAlignment="Left" Margin="10,66,0,0" VerticalAlignment="Top" Width="120" Click="Isolate_Click" Height="23"/>
-        <TextBox x:Name="InPath" HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" TextWrapping="Wrap" Text="1FromGenerator" VerticalAlignment="Top" Width="120"/>
-        <TextBox x:Name="OutPath" HorizontalAlignment="Left" Height="23" Margin="10,38,0,0" TextWrapping="Wrap" Text="2FromCreator" VerticalAlignment="Top" Width="120"/>
+        <Button Content="Создать" HorizontalAlignment="Left" Margin="10,60,0,0" VerticalAlignment="Top" Width="120" Click="Isolate_Click" Height="20"/>
+        <TextBox x:Name="InPath" ToolTip="Входной каталог" HorizontalAlignment="Left" Height="20" Margin="10,10,0,0" TextWrapping="Wrap" Text="1FromGenerator" VerticalAlignment="Top" Width="120"/>
+        <TextBox x:Name="OutPath" ToolTip="Выходной каталог" HorizontalAlignment="Left" Height="20" Margin="10,35,0,0" TextWrapping="Wrap" Text="2FromCreator" VerticalAlignment="Top" Width="120"/>
         <Label x:Name="Status" Content="" HorizontalAlignment="Left" Margin="10,94,0,0" VerticalAlignment="Top" Width="499"/>
+        <syncfusion:IntegerTextBox x:Name="FileName" ToolTip="Начальное имя выходных файлов" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="0" VerticalAlignment="Top" Width="120"/>
+        <syncfusion:IntegerTextBox x:Name="MaxFileSize" ToolTip="Максимальный размер каждого выходного индекс-файла" HorizontalAlignment="Left" Margin="260,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="80000000" VerticalAlignment="Top" Width="120"/>
 
     </Grid>
 </Window>

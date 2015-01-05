@@ -7,10 +7,11 @@
 
         <syncfusion:IntegerTextBox x:Name="Minimum" ToolTip="Минимальный идентификатор" HorizontalAlignment="Left" Margin="10,10,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="0" VerticalAlignment="Top" Width="120"/>
         <syncfusion:IntegerTextBox x:Name="Maximum" ToolTip="Максимальный идентификатор" HorizontalAlignment="Left" Margin="135,10,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="100000" VerticalAlignment="Top" Width="120"/>
-        <syncfusion:IntegerTextBox x:Name="Components" ToolTip="Количество отдельных компонент" HorizontalAlignment="Left" Margin="10,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="100" VerticalAlignment="Top" Width="120"/>
-        <syncfusion:IntegerTextBox x:Name="Pairs" ToolTip="Количество пар" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="10000000" VerticalAlignment="Top" Width="120"/>
-        <Button Click="GeneratePairs" Content="Генерировать" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,112,0,0" Width="120"/>
-        <syncfusion:IntegerTextBox x:Name="FileName" ToolTip="Имя выходного файла" HorizontalAlignment="Left" Margin="10,59,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="0" VerticalAlignment="Top" Width="120"/>
-        <TextBox x:Name="OutPath" HorizontalAlignment="Left" Height="23" Margin="10,84,0,0" TextWrapping="Wrap" Text="1FromGenerator" VerticalAlignment="Top" Width="120"/>
+        <syncfusion:IntegerTextBox x:Name="Pairs" ToolTip="Количество пар" HorizontalAlignment="Left" Margin="260,10,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="10000000" VerticalAlignment="Top" Width="120"/>
+        <Button Click="GeneratePairs" Content="Генерировать" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,60,0,0" Width="120"/>
+        <syncfusion:IntegerTextBox x:Name="FileName" ToolTip="Имя выходного файла" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="0" VerticalAlignment="Top" Width="120"/>
+        <TextBox x:Name="OutPath" ToolTip="Выходной каталог" HorizontalAlignment="Left" Height="20" Margin="10,35,0,0" TextWrapping="Wrap" Text="1FromGenerator" VerticalAlignment="Top" Width="120"/>
+        <Label x:Name="Status" Content="" HorizontalAlignment="Left" Margin="10,85,0,0" VerticalAlignment="Top" Width="499"/>
+
     </Grid>
 </Window>
