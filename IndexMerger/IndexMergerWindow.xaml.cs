@@ -3,18 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace IndexMerger
 {
@@ -28,8 +18,30 @@ namespace IndexMerger
 			InitializeComponent();
 		}
 
+		/// <summary>
+		/// Преобразование переменной типа Int32 в массив байт, который копируется в массив по ссылке с заданным смещением
+		/// </summary>
+		/// <param name="value">Значение для преобразования</param>
+		/// <param name="numArray">Ссылка на целевой массив</param>
+		/// <param name="position">Позиция в целевом массиве с которой будет произведена запись</param>
+		[SecuritySafeCritical]
+		public static unsafe void GetBytes(int value, ref byte[] numArray, int position = 0)
+		{
+			fixed (byte* numPtr = numArray)
+				*(int*)(numPtr + position) = value;
+		}
+
+		[SecuritySafeCritical]
+		public static unsafe void GetBytes(long value, ref byte[] numArray)
+		{
+			fixed (byte* numPtr = numArray)
+				*(long*)numPtr = value;
+		}
+
 		static DirectoryInfo dirin;
 		static DirectoryInfo dirout;
+		static short icnt;
+		static long maxfilesize;
 
 		private void Merge_Click(object sender, RoutedEventArgs e)
 		{
@@ -50,20 +62,22 @@ namespace IndexMerger
 			};
 			wor.DoWork += WorOnDoWork;
 
+			icnt = (short)FileName.Value.GetValueOrDefault();
+			maxfilesize = MaxFileSize.Value.GetValueOrDefault();
 			wor.RunWorkerAsync();
 		}
 
 		private void WorOnDoWork(object sender, DoWorkEventArgs doWorkEventArgs)
 		{
 			short dcnt = 0;
-			short icnt = 0;
-			short len = 0;
-			int readed = 0;
+			//short icnt = 0;
+			short len;
+			int readed;
 			int min;
-			List<int> minlist = new List<int>();
-			List<int> remlist = new List<int>();
+			var keyslist = new List<int>(); //Список извлечённых ключей за итерацию
+			var remlist = new List<int>(); //Список обработанных элементов для удаления
 			long pcnt = 0L;
-			const int maxfilesize = 40000000;
+			//const int maxfilesize = 40000000;
 			var buf = new byte[10];
 			const int bufsize = 4096;
 			var datbuf = new byte[bufsize];
@@ -75,6 +89,7 @@ namespace IndexMerger
 			var start = DateTime.Now;
 			try
 			{
+				//Открытие файлов для чтения индексов и данных
 				foreach (FileInfo file in dirin.EnumerateFiles("index-*").ToArray())
 				{
 					try
@@ -84,46 +99,46 @@ namespace IndexMerger
 						indexStreams[key] = file.OpenRead();
 						datasStreams[key] = new FileInfo(file.FullName.Replace("index-", "datas-")).OpenRead();
 					}
-					catch (Exception e)
-					{
-
-					}
+					catch{}
 				}
+
+				//Главный цикл объединения
 				while (true)
 				{
-					minlist.Clear();
+					keyslist.Clear();
 					foreach (var stream in indexStreams)
 					{
 						try
 						{
-							if (10 != stream.Value.Read(buf, 0, 10))
+							if (10 != stream.Value.Read(buf, 0, 10)) //Считывание очередного индекса
 							{
 								continue;
 							}
-							var key = BitConverter.ToInt32(buf, 0);
-							minlist.Add(key);
+							var key = BitConverter.ToInt32(buf, 0); //Извлечение ключа
+							keyslist.Add(key);
 							if (!sort.ContainsKey(key))
 							{
 								sort[key] = new Dictionary<short, short>();
 							}
-							sort[key].Add(stream.Key, BitConverter.ToInt16(buf, 8));
+							sort[key].Add(stream.Key, BitConverter.ToInt16(buf, 8)); //Извлечение размера
 
 							++pcnt;
 							if (pcnt % 100000 == 0)
 							{
-								((BackgroundWorker)sender).ReportProgress(0, (string)(pcnt + " индексов"));
+								((BackgroundWorker)sender).ReportProgress(0, (string)(pcnt.ToString("N0") + " индексов"));
 							}
 						}
 						catch (Exception e)
 						{
 						}
 					}
+
 					if (sort.Count == 0)
 					{
 						break;
 					}
 					
-					min = minlist.Count == 0 ? int.MaxValue : minlist.Min();
+					min = keyslist.Count == 0 ? int.MaxValue : keyslist.Min();
 					remlist.Clear();
 					foreach (var first in sort.TakeWhile(pair => pair.Key <= min))
 					{
@@ -174,7 +189,7 @@ namespace IndexMerger
 						index.Write(BitConverter.GetBytes(len), 0, 2);
 
 
-						if (datas.Length >= maxfilesize)
+						if (datas.Length >= maxfilesize*4)
 						{
 							using (var indstr = File.Create(dirout.FullName + "\\index-" + icnt.ToString("D5")))
 							{

@@ -17,19 +17,26 @@ namespace IndexSorter
 			InitializeComponent();
 		}
 
+		/// <summary>
+		/// Преобразование переменной типа Int32 в массив байт, который копируется в массив по ссылке с заданным смещением
+		/// </summary>
+		/// <param name="value">Значение для преобразования</param>
+		/// <param name="numArray">Ссылка на целевой массив</param>
+		/// <param name="position">Позиция в целевом массиве с которой будет произведена запись</param>
 		[SecuritySafeCritical]
 		public static unsafe void GetBytes(int value, ref byte[] numArray, int position = 0)
 		{
 			fixed (byte* numPtr = numArray)
-				*(int*)(numPtr+position) = value;
+				*(int*)(numPtr + position) = value;
 		}
 
+		[SecuritySafeCritical]
 		public static unsafe void GetBytes(long value, ref byte[] numArray)
 		{
 			fixed (byte* numPtr = numArray)
 				*(long*)numPtr = value;
 		}
-		
+
 		static DirectoryInfo dirin;
 		static DirectoryInfo dirout;
 		static short icnt;
@@ -61,15 +68,12 @@ namespace IndexSorter
 
 		private void WorOnDoWork(object sender, DoWorkEventArgs doWorkEventArgs)
 		{
-			long pcnt = 0;
-			long dcnt = 0;
-			short len;
-			int last;
-			int lastpos;
-			var buf = new byte[12];
-			var list = new List<long>((int)maxfilesize / 4);
-			var datas = new MemoryStream((int)maxfilesize);
-			var index = new MemoryStream((int)maxfilesize);
+			long pcnt = 0; //Счётчик пар вершин
+			long dcnt = 0; //Счётчик индексов
+			var buf = new byte[12]; //Основной буффер для работы
+			var list = new List<long>((int)maxfilesize); //Список для сортировки
+			var datas = new MemoryStream((int)maxfilesize * 4);
+			var index = new MemoryStream((int)maxfilesize * 4);
 			var start = DateTime.Now;
 
 			foreach (FileInfo file in dirin.EnumerateFiles())
@@ -80,13 +84,13 @@ namespace IndexSorter
 					{
 						while (true)
 						{
-							if (8 != stream.Read(buf, 0, 8))
+							if (8 != stream.Read(buf, 0, 8)) //Считываем пару вершин
 							{
 								break;
 							}
-							Array.Copy(buf, 0, buf, 8, 4);
-							list.Add(BitConverter.ToInt64(buf, 0));
-							list.Add(BitConverter.ToInt64(buf, 4));
+							Array.Copy(buf, 0, buf, 8, 4); //Копируем первую вершину после второй
+							list.Add(BitConverter.ToInt64(buf, 0)); //Добавляем пару для сортировки
+							list.Add(BitConverter.ToInt64(buf, 4)); //Добавляем развёрнутую пару для сортировки
 							dcnt += 2;
 							++pcnt;
 							if (pcnt % 100000 == 0)
@@ -94,80 +98,80 @@ namespace IndexSorter
 								((BackgroundWorker)sender).ReportProgress(0, file.Name + " загружено " + pcnt.ToString("N0") + " пар");
 							}
 
+							if (dcnt < maxfilesize) continue; //При достижении максимума записей происходит сохранение на диск
 							
-							if (dcnt * 4 >= maxfilesize)
-							{
-								((BackgroundWorker)sender).ReportProgress(0, file.Name + " сортировка " + dcnt.ToString("N0") + " пар");
-								list.Sort();
-								len = 0;
-								last = int.MinValue;
-								lastpos = 0;
-								dcnt = 0;
-								foreach (long l in list)
-								{
-									GetBytes(l, ref buf);
-									var dat = BitConverter.ToInt32(buf, 0);
-									var key = BitConverter.ToInt32(buf, 4);
-									if (last != key)
-									{
-										if (len != 0)
-										{
-											GetBytes(last, ref buf);
-											GetBytes(lastpos, ref buf, 4);
-											GetBytes(len, ref buf, 8);
-											index.Write(buf, 0, 10);
-										}
-										last = key;
-										lastpos = (int)datas.Position;
-										len = 1;
-									}
-									else
-									{
-										len++;
-									}
-									GetBytes(dat, ref buf);
-									datas.Write(buf, 0, 4);
-									++dcnt;
-									if (dcnt % 100000 == 0)
-									{
-										((BackgroundWorker)sender).ReportProgress(0, file.Name + " сохранено " + dcnt.ToString("N0") + " пар");
-									}
-								}
+							((BackgroundWorker)sender).ReportProgress(0, file.Name + " сортировка " + dcnt.ToString("N0") + " пар");
+							dcnt = 0;
 
-								if (len != 0)
-								{
-									GetBytes(last, ref buf);
-									GetBytes(lastpos, ref buf, 4);
-									GetBytes(len, ref buf, 8);
-									index.Write(buf, 0, 10);
-								}
-								
-								Flush(index, datas);
-								index.Position = 0;
-								index.SetLength(0);
-								datas.Position = 0;
-								datas.SetLength(0);
-								icnt++;
-								dcnt = 0;
-								list.Clear();
-							}
+							FlushList(sender, list, index, datas);
+							// Сбрасываем данные не освобождая памяти
+							index.Position = 0; 
+							index.SetLength(0);
+							datas.Position = 0;
+							datas.SetLength(0);
 						}
 					}
-					catch (Exception e)
+					catch
 					{
 					}
 				}
 			}
-			Flush(index, datas);
-
+			FlushList(sender, list, index, datas); // Докидываем остатки на диск
 			datas.Close();
 			index.Close();
 
 			((BackgroundWorker)sender).ReportProgress(0, pcnt.ToString("N0") + " индексов за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд");
 		}
 
-		private static void Flush(MemoryStream index, MemoryStream datas)
+		private static void FlushList(object sender, List<long> list, MemoryStream index, MemoryStream datas)
 		{
+			list.Sort(); //Сортируем список
+			byte[] buf = new byte[12];
+			short len = 0;
+			var last = int.MinValue;
+			var lastpos = 0;
+			long dcnt = 0;
+			foreach (long l in list)
+			{
+				GetBytes(l, ref buf); //Получаем массив байтов
+				var dat = BitConverter.ToInt32(buf, 0);
+				var key = BitConverter.ToInt32(buf, 4);
+				if (last != key)
+				{
+					if (len != 0)
+					{
+						GetBytes(last, ref buf);
+						GetBytes(lastpos, ref buf, 4);
+						GetBytes(len, ref buf, 8);
+						index.Write(buf, 0, 10); //Записываем индекс
+					}
+					last = key;
+					lastpos = (int) datas.Position;
+					len = 1;
+				}
+				else
+				{
+					len++;
+				}
+				GetBytes(dat, ref buf);
+				datas.Write(buf, 0, 4); //Записываем данные
+				++dcnt;
+				if (dcnt%100000 == 0)
+				{
+					((BackgroundWorker) sender).ReportProgress(0, "Cохранено " + dcnt.ToString("N0") + " пар");
+				}
+			}
+			
+			list.Clear();
+
+			if (len != 0) //Дозаписываем остатки индекса
+			{
+				GetBytes(last, ref buf);
+				GetBytes(lastpos, ref buf, 4);
+				GetBytes(len, ref buf, 8);
+				index.Write(buf, 0, 10);
+			}
+
 			if (datas.Length > 0)
 			{
 				using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
@@ -184,6 +188,8 @@ namespace IndexSorter
 					index.CopyTo(indstr);
 				}
 			}
+
+			icnt++;
 		}
 	}
 }

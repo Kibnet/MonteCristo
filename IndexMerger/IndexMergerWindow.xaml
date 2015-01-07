@@ -1,11 +1,13 @@
-﻿<Window x:Class="IndexMerger.IndexMergerWindow"
+﻿<Window xmlns:syncfusion="http://schemas.syncfusion.com/wpf"  x:Class="IndexMerger.IndexMergerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="IndexMergerWindow" Height="350" Width="525">
     <Grid>
-        <Button Content="Слить" HorizontalAlignment="Left" Margin="10,66,0,0" VerticalAlignment="Top" Width="120" Click="Merge_Click" Height="23"/>
-        <TextBox x:Name="InPath" HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" TextWrapping="Wrap" Text="2FromSorter" VerticalAlignment="Top" Width="120"/>
-        <TextBox x:Name="OutPath" HorizontalAlignment="Left" Height="23" Margin="10,38,0,0" TextWrapping="Wrap" Text="3FromMerger" VerticalAlignment="Top" Width="120"/>
-        <Label x:Name="Status" Content="" HorizontalAlignment="Left" Margin="10,94,0,0" VerticalAlignment="Top" Width="499"/>
+        <Button Content="Объединить" HorizontalAlignment="Left" Margin="10,60,0,0" VerticalAlignment="Top" Width="120" Click="Merge_Click" Height="20"/>
+        <TextBox x:Name="InPath" HorizontalAlignment="Left" Height="20" Margin="10,10,0,0" TextWrapping="Wrap" Text="2FromSorter" VerticalAlignment="Top" Width="120"/>
+        <TextBox x:Name="OutPath" HorizontalAlignment="Left" Height="20" Margin="10,35,0,0" TextWrapping="Wrap" Text="3FromMerger" VerticalAlignment="Top" Width="120"/>
+        <Label x:Name="Status" Content="" Margin="10,85,9.667,0" VerticalAlignment="Top"/>
+        <syncfusion:IntegerTextBox x:Name="FileName" ToolTip="Начальное имя выходных файлов" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="0" VerticalAlignment="Top" Width="120"/>
+        <syncfusion:IntegerTextBox x:Name="MaxFileSize" ToolTip="Максимальное количество записей в каждом отсортированном дата-файле (4 байта на запись)" HorizontalAlignment="Left" Margin="260,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="20000000" VerticalAlignment="Top" Width="120"/>
     </Grid>
 </Window>
