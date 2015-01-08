@@ -126,35 +126,30 @@ namespace IndexSorter
 		private static void FlushList(object sender, List<long> list, MemoryStream index, MemoryStream datas)
 		{
 			list.Sort(); //Сортируем список
-			byte[] buf = new byte[12];
+			byte[] buf = new byte[8];
 			short len = 0;
 			var last = int.MinValue;
-			var lastpos = 0;
 			long dcnt = 0;
 			foreach (long l in list)
 			{
 				GetBytes(l, ref buf); //Получаем массив байтов
-				var dat = BitConverter.ToInt32(buf, 0);
+				datas.Write(buf, 0, 4); //Записываем данные
 				var key = BitConverter.ToInt32(buf, 4);
 				if (last != key)
 				{
 					if (len != 0)
 					{
 						GetBytes(last, ref buf);
-						GetBytes(lastpos, ref buf, 4);
-						GetBytes(len, ref buf, 8);
-						index.Write(buf, 0, 10); //Записываем индекс
+						GetBytes(len, ref buf, 4);
+						index.Write(buf, 0, 6); //Записываем индекс
 					}
 					last = key;
-					lastpos = (int) datas.Position;
 					len = 1;
 				}
 				else
 				{
 					len++;
 				}
-				GetBytes(dat, ref buf);
-				datas.Write(buf, 0, 4); //Записываем данные
 				++dcnt;
 				if (dcnt%100000 == 0)
 				{
@@ -167,9 +162,8 @@ namespace IndexSorter
 			if (len != 0) //Дозаписываем остатки индекса
 			{
 				GetBytes(last, ref buf);
-				GetBytes(lastpos, ref buf, 4);
-				GetBytes(len, ref buf, 8);
-				index.Write(buf, 0, 10);
+				GetBytes(len, ref buf, 4);
+				index.Write(buf, 0, 6); //Записываем индекс
 			}
 
 			if (datas.Length > 0)

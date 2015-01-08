@@ -110,7 +110,7 @@ namespace IndexMerger
 					{
 						try
 						{
-							if (10 != stream.Value.Read(buf, 0, 10)) //Считывание очередного индекса
+							if (6 != stream.Value.Read(buf, 0, 6)) //Считывание очередного индекса
 							{
 								continue;
 							}
@@ -120,7 +120,7 @@ namespace IndexMerger
 							{
 								sort[key] = new Dictionary<short, short>();
 							}
-							sort[key].Add(stream.Key, BitConverter.ToInt16(buf, 8)); //Извлечение размера
+							sort[key].Add(stream.Key, BitConverter.ToInt16(buf, 4)); //Извлечение размера
 
 							++pcnt;
 							if (pcnt % 100000 == 0)
@@ -144,8 +144,6 @@ namespace IndexMerger
 					{
 						remlist.Add(first.Key);
 						len = 0;
-						index.Write(BitConverter.GetBytes(first.Key), 0, 4);
-						index.Write(BitConverter.GetBytes((int)datas.Position), 0, 4);
 						foreach (var ind in first.Value)
 						{
 							var datstream = datasStreams[ind.Key];
@@ -165,19 +163,18 @@ namespace IndexMerger
 										break;
 									}
 								}
-								readed = lenbuf - readed;
-								if (datstream.Read(datbuf, 0, readed) == readed)
+								lenbuf -= readed;
+								if (datstream.Read(datbuf, 0, lenbuf) == lenbuf)
 								{
-									datas.Write(datbuf, 0, readed);
+									datas.Write(datbuf, 0, lenbuf);
 								}
 							}
 							else
 							{
-								if (datstream.Read(datbuf, 0, lenbuf) != lenbuf)
+								if (datstream.Read(datbuf, 0, lenbuf) == lenbuf)
 								{
-									continue;
+									datas.Write(datbuf, 0, lenbuf);
 								}
-								datas.Write(datbuf, 0, lenbuf);
 							}
 							len += ind.Value;
 							++pcnt;
@@ -186,6 +183,7 @@ namespace IndexMerger
 								((BackgroundWorker)sender).ReportProgress(0, (string)(pcnt + " индексов"));
 							}
 						}
+						index.Write(BitConverter.GetBytes(first.Key), 0, 4);
 						index.Write(BitConverter.GetBytes(len), 0, 2);
 
 

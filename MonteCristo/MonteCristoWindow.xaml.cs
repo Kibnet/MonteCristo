@@ -50,17 +50,20 @@ namespace MonteCristo
 			{
 				try
 				{
+					long position = 0;
 					var filekey = long.Parse(file.Name.Split('-')[1]);
 					datasStreams[(short)filekey] = new FileInfo(file.FullName.Replace("index-", "datas-")).OpenRead();
 					using (var stream = file.OpenRead())
 					{
 						while (true)
 						{
-							if (10 != stream.Read(buf, 0, 10))
+							if (6 != stream.Read(buf, 0, 6))
 							{
 								break;
 							}
-							sort[BitConverter.ToInt32(buf, 0)] = (filekey << 48) + (BitConverter.ToInt64(buf, 4));
+							var length = BitConverter.ToInt16(buf, 4);
+							sort[BitConverter.ToInt32(buf, 0)] = (filekey << 48) + ((long)length << 32) + (position);
+							position += length*4;
 							indexcount++;
 						}
 					}
