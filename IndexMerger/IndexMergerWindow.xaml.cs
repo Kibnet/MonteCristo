@@ -77,6 +77,7 @@ namespace IndexMerger
 			var keyslist = new List<int>(); //Список извлечённых ключей за итерацию
 			var remlist = new List<int>(); //Список обработанных элементов для удаления
 			long pcnt = 0L;
+			long pcntd = 0L;
 			//const int maxfilesize = 40000000;
 			var buf = new byte[10];
 			const int bufsize = 4096;
@@ -99,7 +100,7 @@ namespace IndexMerger
 						indexStreams[key] = file.OpenRead();
 						datasStreams[key] = new FileInfo(file.FullName.Replace("index-", "datas-")).OpenRead();
 					}
-					catch{}
+					catch { }
 				}
 
 				//Главный цикл объединения
@@ -125,7 +126,7 @@ namespace IndexMerger
 							++pcnt;
 							if (pcnt % 100000 == 0)
 							{
-								((BackgroundWorker)sender).ReportProgress(0, (string)(pcnt.ToString("N0") + " индексов"));
+								((BackgroundWorker)sender).ReportProgress(0, (string)("Считано " + pcnt.ToString("N0") + " индексов"));
 							}
 						}
 						catch (Exception e)
@@ -137,75 +138,52 @@ namespace IndexMerger
 					{
 						break;
 					}
-					
-					min = keyslist.Count == 0 ? int.MaxValue : keyslist.Min();
+
+					min = keyslist.Count == 0 ? int.MaxValue : keyslist.Min(); //Получаем верхнюю границу, ниже которой уже ничего не появится
 					remlist.Clear();
-					foreach (var first in sort.TakeWhile(pair => pair.Key <= min))
+					foreach (var first in sort.TakeWhile(pair => pair.Key <= min)) //Получаем все индексы ниже границы
 					{
-						remlist.Add(first.Key);
+						remlist.Add(first.Key); //Добавляем в очередь на удаление
 						len = 0;
-						foreach (var ind in first.Value)
+						foreach (var ind in first.Value) //Перечисляем все файлы для данного индекса
 						{
-							var datstream = datasStreams[ind.Key];
-							var lenbuf = ind.Value * 4;
-							readed = 0;
-							if (lenbuf > bufsize)
+							var datstream = datasStreams[ind.Key]; //Достаем поток файла
+							var lenbuf = ind.Value * 4; //Размер данных в этом файле
+							while (lenbuf > bufsize)
 							{
-								while (lenbuf - readed > bufsize)
+								if (datstream.Read(datbuf, 0, bufsize) == bufsize)
 								{
-									if (datstream.Read(datbuf, 0, bufsize) == bufsize)
-									{
-										readed += bufsize;
-										datas.Write(datbuf, 0, bufsize);
-									}
-									else
-									{
-										break;
-									}
+									lenbuf -= bufsize;
+									datas.Write(datbuf, 0, bufsize);
 								}
-								lenbuf -= readed;
-								if (datstream.Read(datbuf, 0, lenbuf) == lenbuf)
-								{
-									datas.Write(datbuf, 0, lenbuf);
-								}
+								else break;
 							}
-							else
+							
+							if (datstream.Read(datbuf, 0, lenbuf) == lenbuf)
 							{
-								if (datstream.Read(datbuf, 0, lenbuf) == lenbuf)
-								{
-									datas.Write(datbuf, 0, lenbuf);
-								}
+								datas.Write(datbuf, 0, lenbuf);
 							}
+
 							len += ind.Value;
-							++pcnt;
-							if (pcnt % 100000 == 0)
+							++pcntd;
+							if (pcntd % 100000 == 0)
 							{
-								((BackgroundWorker)sender).ReportProgress(0, (string)(pcnt + " индексов"));
+								((BackgroundWorker)sender).ReportProgress(0, "Объединено " + pcntd.ToString("N0") + " индексов");
 							}
 						}
-						index.Write(BitConverter.GetBytes(first.Key), 0, 4);
-						index.Write(BitConverter.GetBytes(len), 0, 2);
+						GetBytes(first.Key, ref buf);
+						GetBytes(len, ref buf, 4);
+						index.Write(buf, 0, 6);
 
-
-						if (datas.Length >= maxfilesize*4)
+						if (datas.Length >= maxfilesize * 4)
 						{
-							using (var indstr = File.Create(dirout.FullName + "\\index-" + icnt.ToString("D5")))
-							{
-								index.Position = 0;
-								index.CopyTo(indstr);
-							}
-							using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
-							{
-								datas.Position = 0;
-								datas.CopyTo(datstr);
-							}
+							Flush(datas, index);
 							index.Position = 0;
 							index.SetLength(0);
 							datas.Position = 0;
 							datas.SetLength(0);
 							icnt++;
 						}
-						//sort.Remove(first.Key);
 					}
 					foreach (var i in remlist)
 					{
@@ -223,26 +201,31 @@ namespace IndexMerger
 				{
 					stream.Value.Close();
 				}
-				if (datas.Length > 0)
-				{
-					using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
-					{
-						datas.Position = 0;
-						datas.CopyTo(datstr);
-						datas.Close();
-					}
-				}
-				if (index.Length > 0)
-				{
-					using (var indstr = File.Create(dirout.FullName + "\\index-" + icnt.ToString("D5")))
-					{
-						index.Position = 0;
-						index.CopyTo(indstr);
-						index.Close();
-					}
-				}
+				Flush(datas, index);
+				datas.Close();
+				index.Close();
 			}
 			((BackgroundWorker)sender).ReportProgress(0, pcnt + " индексов за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд");
+		}
+
+		private static void Flush(MemoryStream datas, MemoryStream index)
+		{
+			if (datas.Length > 0)
+			{
+				using (var datstr = File.Create(dirout.FullName + "\\datas-" + icnt.ToString("D5")))
+				{
+					datas.Position = 0;
+					datas.CopyTo(datstr);
+				}
+			}
+			if (index.Length > 0)
+			{
+				using (var indstr = File.Create(dirout.FullName + "\\index-" + icnt.ToString("D5")))
+				{
+					index.Position = 0;
+					index.CopyTo(indstr);
+				}
+			}
 		}
 	}
 }

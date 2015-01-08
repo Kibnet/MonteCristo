@@ -3,24 +3,33 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         xmlns:monteCristo="clr-namespace:MonteCristo"
+        xmlns:controls="clr-namespace:GraphX.Controls;assembly=GraphX.Controls"
         x:Class="MonteCristo.MonteCristoWindow"
         Title="MonteCristoWindow" Height="350" Width="525">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <TextBox x:Name="InPath" HorizontalAlignment="Left" Height="20" Margin="10,10,0,0" TextWrapping="Wrap" Text="3FromMerger" VerticalAlignment="Top" Width="120"/>
         <Button Content="Загрузить индексы" HorizontalAlignment="Left" Margin="135,9,0,0" VerticalAlignment="Top" Width="120" Click="LoadIndexes"/>
         <Button Content="Найти вершину" HorizontalAlignment="Left" Margin="260,35,0,0" VerticalAlignment="Top" Width="120" Click="FindVertex"/>
 
         <syncfusion:IntegerTextBox Name="VertexBox" ToolTip="Идентификатор для поиска" HorizontalAlignment="Left" Margin="10,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="100" VerticalAlignment="Top" Width="120"/>
         <syncfusion:IntegerTextBox Name="DepthBox" ToolTip="Глубина поиска" HorizontalAlignment="Left" Margin="135,35,0,0" MinWidth="100" NumberGroupSeparator="," TextWrapping="Wrap" Value="3" VerticalAlignment="Top" Width="120"/>
-        <Label x:Name="Status" Content="" Margin="10,60,10,0" VerticalAlignment="Top"/>
-        <TreeView Name="GraphView" Margin="10,91,10,10">
+        <Label x:Name="Status" Content="" Margin="10,60,10,10" VerticalAlignment="Top"/>
+
+
+        <!--<TreeView Name="GraphView" Margin="0" Grid.Row="1">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate DataType="monteCristo:Vertex" ItemsSource = "{Binding Path=Items}">
                     <TextBlock Text="{Binding Path=ID, Mode=OneWay}">(<Run Text="{Binding Path=Items.Count, Mode=OneWay}"/>)</TextBlock>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
-            
-        </TreeView>
 
+        </TreeView>-->
+        <controls:ZoomControl Grid.Row="1" x:Name="zoomctrl">
+            <monteCristo:GraphAreaExample x:Name="Area"/>
+        </controls:ZoomControl>
     </Grid>
 </Window>

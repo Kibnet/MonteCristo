@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
-using System.Windows.Forms;
+using GraphX;
+using GraphX.Controls;
+using GraphX.GraphSharp.Algorithms.Layout.Simple.FDP;
+using GraphX.GraphSharp.Algorithms.OverlapRemoval;
+using GraphX.Logic;
+using QuickGraph;
+using YAXLib;
 
 namespace MonteCristo
 {
@@ -15,11 +20,30 @@ namespace MonteCristo
 		public MonteCristoWindow()
 		{
 			InitializeComponent();
+			ZoomControl.SetViewFinderVisibility(zoomctrl, Visibility.Visible);
+			zoomctrl.ZoomToFill();
+			GraphAreaExample_Setup();
+		}
+
+		private void GraphAreaExample_Setup()
+		{
+			var LogicCore = new GXLogicCoreExample();
+			LogicCore.Graph = new GraphExample();
+			LogicCore.DefaultLayoutAlgorithm = GraphX.LayoutAlgorithmTypeEnum.KK;
+			LogicCore.DefaultLayoutAlgorithmParams = LogicCore.AlgorithmFactory.CreateLayoutParameters(GraphX.LayoutAlgorithmTypeEnum.KK);
+			((KKLayoutParameters)LogicCore.DefaultLayoutAlgorithmParams).MaxIterations = 1000;
+			LogicCore.DefaultOverlapRemovalAlgorithm = GraphX.OverlapRemovalAlgorithmTypeEnum.FSA;
+			LogicCore.DefaultOverlapRemovalAlgorithmParams = LogicCore.AlgorithmFactory.CreateOverlapRemovalParameters(GraphX.OverlapRemovalAlgorithmTypeEnum.FSA);
+			((OverlapRemovalParameters)LogicCore.DefaultOverlapRemovalAlgorithmParams).HorizontalGap = 50;
+			((OverlapRemovalParameters)LogicCore.DefaultOverlapRemovalAlgorithmParams).VerticalGap = 50;
+			LogicCore.DefaultEdgeRoutingAlgorithm = GraphX.EdgeRoutingAlgorithmTypeEnum.SimpleER;
+			LogicCore.AsyncAlgorithmCompute = false;
+			Area.LogicCore = LogicCore;// as IGXLogicCore<DataVertex, DataEdge, BidirectionalGraph<DataVertex, DataEdge>>;
 		}
 
 		static DirectoryInfo dirin;
-		static SortedDictionary<int, long> sort = new SortedDictionary<int, long>();
-		static SortedDictionary<short, Stream> datasStreams = new SortedDictionary<short, Stream>();
+		static Dictionary<int, long> sort = new Dictionary<int, long>();
+		static Dictionary<short, Stream> datasStreams = new Dictionary<short, Stream>();
 
 		private void LoadIndexes(object sender, RoutedEventArgs e)
 		{
@@ -63,7 +87,7 @@ namespace MonteCristo
 							}
 							var length = BitConverter.ToInt16(buf, 4);
 							sort[BitConverter.ToInt32(buf, 0)] = (filekey << 48) + ((long)length << 32) + (position);
-							position += length*4;
+							position += length * 4;
 							indexcount++;
 						}
 					}
@@ -78,26 +102,35 @@ namespace MonteCristo
 
 		private void FindVertex(object sender, RoutedEventArgs e)
 		{
-			GraphView.Items.Clear();
+			//GraphView.Items.Clear();
 			added.Clear();
+			Area.LogicCore.Graph.Clear();
 			var start = DateTime.Now;
+			//var dataGraph = new GraphExample();
 			int root = (int)VertexBox.Value.GetValueOrDefault();
 			int depth = (int)DepthBox.Value.GetValueOrDefault();
-			GraphView.Items.Add(RecursiveFind(root, depth));
+			RecursiveFind(Area.LogicCore.Graph, root, depth);
 			Status.Content = added.Count + " индексов за " + (DateTime.Now - start).TotalSeconds.ToString("F2") + " секунд";
+
+			//Area.LogicCore.Graph = dataGraph;
+			Area.GenerateGraph(true, true);
+			Area.SetEdgesDashStyle(GraphX.EdgeDashStyle.Solid);
+			Area.ShowAllEdgesArrows(true);
+			Area.ShowAllEdgesLabels(true);
+			zoomctrl.ZoomToFill();
 		}
 
-		SortedDictionary<int, Vertex> added = new SortedDictionary<int, Vertex>();
+		SortedDictionary<int, DataVertex> added = new SortedDictionary<int, DataVertex>();
 
-		private Vertex RecursiveFind(int root, int depth)
+		private DataVertex RecursiveFind(BidirectionalGraph<DataVertex, DataEdge> graph, int root, int depth)
 		{
 			if (added.ContainsKey(root))
 			{
 				return added[root];
 			}
-			
-			var vert = new Vertex() { ID = root };
-			added[root] = vert;
+			var thisVert = new DataVertex(root.ToString("N0")) { ID = root };
+			graph.AddVertex(thisVert);
+			added[root] = thisVert;
 			if (depth > 0)
 			{
 				var info = sort[root];
@@ -113,24 +146,100 @@ namespace MonteCristo
 				{
 					for (int i = 0; i < len; i++)
 					{
-						
-						vert.Items.Add(RecursiveFind(BitConverter.ToInt32(tmp, i * 4), depth - 1));
+						var destVert = BitConverter.ToInt32(tmp, i*4);
+						if (!added.ContainsKey(destVert))
+						{
+							var dataEdge = new DataEdge(thisVert, RecursiveFind(graph, destVert, depth - 1))
+							{
+								Text = string.Format("{0} -> {1}", root, destVert)
+							};
+							graph.AddEdge(dataEdge);
+						}
 					}
 				}
-
 			}
-			return vert;
+			return thisVert;
 		}
-
 	}
-	public class Vertex
-	{
-		public int ID { get; set; }
-		public ObservableCollection<Vertex> Items { get; set; }
 
-		public Vertex()
+	public class GXLogicCoreExample : GXLogicCore<DataVertex, DataEdge, BidirectionalGraph<DataVertex, DataEdge>> { }
+
+	public class GraphAreaExample : GraphArea<DataVertex, DataEdge, BidirectionalGraph<DataVertex, DataEdge>> { }
+
+	public class GraphExample : BidirectionalGraph<DataVertex, DataEdge> { }
+
+	public class DataVertex : VertexBase
+	{
+		/// <summary>
+		/// Some string property for example purposes
+		/// </summary>
+		public string Text { get; set; }
+
+		#region Calculated or static props
+		[YAXDontSerialize]
+		public DataVertex Self
 		{
-			Items = new ObservableCollection<Vertex>();
+			get { return this; }
 		}
+
+		public override string ToString()
+		{
+			return Text;
+		}
+
+		#endregion
+
+		/// <summary>
+		/// Default parameterless constructor for this class
+		/// (required for YAXLib serialization)
+		/// </summary>
+		public DataVertex()
+			: this("")
+		{
+		}
+
+		public DataVertex(string text = "")
+		{
+			Text = text;
+		}
+	}
+
+	public class DataEdge : EdgeBase<DataVertex>
+	{
+		/// <summary>
+		/// Default constructor. We need to set at least Source and Target properties of the edge.
+		/// </summary>
+		/// <param name="source">Source vertex data</param>
+		/// <param name="target">Target vertex data</param>
+		/// <param name="weight">Optional edge weight</param>
+		public DataEdge(DataVertex source, DataVertex target, double weight = 1)
+			: base(source, target, weight)
+		{
+		}
+		/// <summary>
+		/// Default parameterless constructor (for serialization compatibility)
+		/// </summary>
+		public DataEdge()
+			: base(null, null, 1)
+		{
+		}
+
+		/// <summary>
+		/// Custom string property for example
+		/// </summary>
+		public string Text { get; set; }
+
+		#region GET members
+		public override string ToString()
+		{
+			return Text;
+		}
+
+		[YAXDontSerialize]
+		public DataEdge Self
+		{
+			get { return this; }
+		}
+		#endregion
 	}
 }
