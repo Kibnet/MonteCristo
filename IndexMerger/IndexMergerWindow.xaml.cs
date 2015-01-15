@@ -124,10 +124,10 @@ namespace IndexMerger
 							sort[key].Add(stream.Key, BitConverter.ToInt16(buf, 4)); //Извлечение размера
 
 							++pcnt;
-							if (pcnt % 100000 == 0)
-							{
-								((BackgroundWorker)sender).ReportProgress(0, (string)("Считано " + pcnt.ToString("N0") + " индексов"));
-							}
+							//if (pcnt % 100000 == 0)
+							//{
+							//	((BackgroundWorker)sender).ReportProgress(0, (string)("Считано " + pcnt.ToString("N0") + " индексов"));
+							//}
 						}
 						catch (Exception e)
 						{
